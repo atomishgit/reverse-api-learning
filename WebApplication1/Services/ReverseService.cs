@@ -45,35 +45,8 @@ public class ReverseService
             snapshot = new List<HistoryEntry>(_history);
         }
         
-        switch (status)
-        {
-            case HistoryStatus.Active:
-                snapshot.RemoveAll(x => x.IsDeleted);
-                break;
-            case HistoryStatus.Deleted:
-                snapshot.RemoveAll(x => !x.IsDeleted);
-                break;
-            case HistoryStatus.EverDeleted:
-                snapshot.RemoveAll(x => x.LastDeletedUTC == null);
-                break;
-            case HistoryStatus.NeverDeleted:
-                snapshot.RemoveAll(x => x.LastDeletedUTC != null);
-                break;
-            case null:
-                if (!includeDeleted)
-                    snapshot.RemoveAll(x => x.IsDeleted);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(status), status, null);
+        return ApplyHistoryFilter(snapshot, status, order, limit, includeDeleted);
         }
-        
-        var ordered = order == HistoryOrder.Asc 
-            ? snapshot.OrderBy(x => x.CreatedUTC).ThenBy(x => x.Id) 
-            : snapshot.OrderByDescending(x => x.CreatedUTC).ThenByDescending(x => x.Id);
-        
-        // Return the snapshot, limited to the first N (limit) items
-        return limit.HasValue ? ordered.Take(limit.Value).ToList() : ordered.ToList();
-    }
 
     public HistoryEntry? GetHistoryItem(Guid id, bool includeDeleted = false)
     {
@@ -141,5 +114,26 @@ public class ReverseService
             return (_history[index], false);
 
         }
+    }
+
+    private static List<HistoryEntry> ApplyHistoryFilter(List<HistoryEntry> snapshot, HistoryStatus? status,
+        HistoryOrder? order, int? limit, bool includeDeleted = false)
+    {
+        var filtered = status switch
+        {
+            HistoryStatus.Active => snapshot.Where(x => !x.IsDeleted).ToList(),
+            HistoryStatus.Deleted => snapshot.Where(x => x.IsDeleted).ToList(),
+            HistoryStatus.EverDeleted => snapshot.Where(x => x.LastDeletedUTC != null).ToList(),
+            HistoryStatus.NeverDeleted => snapshot.Where(x => x.LastDeletedUTC == null).ToList(),
+            null => includeDeleted ? snapshot : snapshot.Where(x => !x.IsDeleted).ToList(),
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+        };
+        
+        var ordered = order == HistoryOrder.Asc 
+            ? filtered.OrderBy(x => x.CreatedUTC).ThenBy(x => x.Id) 
+            : filtered.OrderByDescending(x => x.CreatedUTC).ThenByDescending(x => x.Id);
+        
+        // Return the snapshot, limited to the first N (limit) items
+        return limit.HasValue ? ordered.Take(limit.Value).ToList() : ordered.ToList();
     }
 }
