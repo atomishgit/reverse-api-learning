@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices.JavaScript;
 using WebApplication1.Models;
 using WebApplication1.Services;
 
@@ -8,9 +7,6 @@ builder.Services.AddSingleton<IClock, SystemClock>();
 
 // Register ReverseService as singleton
 builder.Services.AddSingleton<ReverseService>();
-
-//In-Memory storage
-var history = new List<HistoryEntry>();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

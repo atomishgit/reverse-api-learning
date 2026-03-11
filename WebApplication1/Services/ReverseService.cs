@@ -45,8 +45,12 @@ public class ReverseService
             snapshot = new List<HistoryEntry>(_history);
         }
         
-        return ApplyHistoryFilter(snapshot, status, order, limit, includeDeleted);
-        }
+        // Apply status filter
+        var filtered = ApplyHistoryFilter(snapshot, status, includeDeleted);
+        
+        // Return filtered list after applying ordering and limit filters
+        return ApplyOrderingAndLimit(filtered, order, limit);
+    }
 
     public HistoryEntry? GetHistoryItem(Guid id, bool includeDeleted = false)
     {
@@ -116,10 +120,9 @@ public class ReverseService
         }
     }
 
-    private static List<HistoryEntry> ApplyHistoryFilter(List<HistoryEntry> snapshot, HistoryStatus? status,
-        HistoryOrder? order, int? limit, bool includeDeleted = false)
+    private static List<HistoryEntry> ApplyHistoryFilter(List<HistoryEntry> snapshot, HistoryStatus? status, bool includeDeleted = false)
     {
-        var filtered = status switch
+        return status switch
         {
             HistoryStatus.Active => snapshot.Where(x => !x.IsDeleted).ToList(),
             HistoryStatus.Deleted => snapshot.Where(x => x.IsDeleted).ToList(),
@@ -128,11 +131,14 @@ public class ReverseService
             null => includeDeleted ? snapshot : snapshot.Where(x => !x.IsDeleted).ToList(),
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
-        
-        var ordered = order == HistoryOrder.Asc 
-            ? filtered.OrderBy(x => x.CreatedUTC).ThenBy(x => x.Id) 
-            : filtered.OrderByDescending(x => x.CreatedUTC).ThenByDescending(x => x.Id);
-        
+    }
+
+    private static List<HistoryEntry> ApplyOrderingAndLimit(List<HistoryEntry> snapshot, HistoryOrder order, int? limit)
+    {
+        var ordered = order == HistoryOrder.Asc
+            ? snapshot.OrderBy(x => x.CreatedUTC).ThenBy(x => x.Id)
+            : snapshot.OrderByDescending(x => x.CreatedUTC).ThenByDescending(x => x.Id);
+
         // Return the snapshot, limited to the first N (limit) items
         return limit.HasValue ? ordered.Take(limit.Value).ToList() : ordered.ToList();
     }

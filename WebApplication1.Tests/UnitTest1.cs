@@ -7,11 +7,25 @@ namespace WebApplication1.Tests;
 
 public class UnitTest1
 {
+    private static ReverseService CreateService(out FakeClock clock)
+    {
+        clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
+        return new ReverseService(clock);
+    }
+
+    private static void CreateEntries(ReverseService service, params string[] entries)
+    {
+        foreach (var entry in entries)
+        {
+            var result = service.ReverseAndStore(entry);
+            result.ok.Should().BeTrue();
+        }
+    }
     [Fact]
     public void ReverseService_ReverseAndStore_EnsureCharactersLessThan100()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        ReverseService service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
+        
         var result = service.ReverseAndStore(
             "12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901");
         
@@ -22,8 +36,7 @@ public class UnitTest1
     [Fact]
     public void ReverseService_ReverseAndStore_EnsureStringIsReversed()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        ReverseService service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         var result = service.ReverseAndStore("Hello, World!");
         
         result.ok.Should().BeTrue();
@@ -33,8 +46,7 @@ public class UnitTest1
     [Fact]
     public void ReverseService_GetHistoryItem_DeletedEntry_HiddenByDefault()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
 
         // Arrange: create entry
         var reverse = service.ReverseAndStore("abc");
@@ -58,9 +70,7 @@ public class UnitTest1
     [Fact]
     public void ReverseService_DeleteHistoryItem_DeletedEntry_TimeIsCorrect()
     {
-        var testTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var clock = new FakeClock{UtcNow = testTime};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Arrange: create entry
         var reverse = service.ReverseAndStore("abc");
@@ -74,32 +84,27 @@ public class UnitTest1
         var del = service.DeleteHistoryItem(id);
         del.Item1.Should().NotBeNull();
         
-        del.Item1.DeletedUTC.Should().Be(testTime);
+        del.Item1.DeletedUTC.Should().Be(clock.UtcNow);
     }
     
     [Fact]
     public void Snapshot_WithEqualTimestamps_IsDeterministic()
     {
         
-        var testTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var clock = new FakeClock { UtcNow = testTime };
-        var service = new ReverseService(clock);
-
-        service.ReverseAndStore("a");
-        service.ReverseAndStore("b");
+        ReverseService service = CreateService(out var clock);
+        CreateEntries(service, "a", "b");
 
         var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Asc, includeDeleted: false);
 
-        snapshot[0].CreatedUTC.Should().Be(testTime);
-        snapshot[1].CreatedUTC.Should().Be(testTime);
+        snapshot[0].CreatedUTC.Should().Be(clock.UtcNow);
+        snapshot[1].CreatedUTC.Should().Be(clock.UtcNow);
         snapshot.Should().BeInAscendingOrder(x => x.Id);
     }
 
     [Fact]
     public void ReverseService_RestoredEntry_IsVisibleAgainInSnapshotByDefault()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Arrange: create entry
         var reverse = service.ReverseAndStore("abc");
@@ -134,8 +139,7 @@ public class UnitTest1
     [Fact]
     public void ReverseService_ClearHistory_IgnoresDeletedEntries()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create entry
         var reverse = service.ReverseAndStore("abc");
@@ -170,8 +174,7 @@ public class UnitTest1
     [Fact]
     public void ReverseService_RestoreEntry_IgnoresActiveEntries()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create entry
         var reverse = service.ReverseAndStore("abc");
@@ -191,8 +194,7 @@ public class UnitTest1
     [Fact]
     public void Reverse_Service_DeleteEntry_ActiveEntrySetsLastDeletedUTC()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create entry
         var reverse = service.ReverseAndStore("abc");
@@ -214,8 +216,7 @@ public class UnitTest1
     [Fact]
     public void ReverseService_RestoreEntry_LastDeletedUTCStillEqualsOriginalDeletedUTC()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create entry
         var reverse = service.ReverseAndStore("abc");
@@ -242,8 +243,7 @@ public class UnitTest1
     [Fact]
     public void ReverseService_DeleteEntry_AlreadyDeletedEntryDoesNotChangeTimestamps()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create entry
         var reverse = service.ReverseAndStore("abc");
@@ -270,16 +270,10 @@ public class UnitTest1
     [Fact]
     public void ReverseService_GetSnapshot_ActiveStatusReturnsOnlyActiveEntries()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create 3 entries
-        var reverse = service.ReverseAndStore("abc");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("def");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("ghi");
-        reverse.ok.Should().BeTrue();
+       CreateEntries(service, "abc", "def", "ghi");
         
         // Grab the snapshot
         var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
@@ -298,16 +292,10 @@ public class UnitTest1
     [Fact]
     public void ReverseService_GetSnapshot_DeletedStatusReturnsOnlyDeletedEntries()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create 3 entries
-        var reverse = service.ReverseAndStore("abc");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("def");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("ghi");
-        reverse.ok.Should().BeTrue();
+        CreateEntries(service, "abc", "def", "ghi");
         
         // Grab the snapshot
         var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
@@ -326,18 +314,10 @@ public class UnitTest1
     [Fact]
     public void ReverseService_GetSnapshot_EverDeletedStatusReturnsOnlyEntriesThatHaveBeenDeleted()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create 4 entries
-        var reverse = service.ReverseAndStore("abc");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("def");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("ghi");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("jkl");
-        reverse.ok.Should().BeTrue();
+        CreateEntries(service, "abc", "def", "ghi", "jkl");
         
         // Grab the snapshot
         var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
@@ -367,18 +347,10 @@ public class UnitTest1
     [Fact]
     public void ReverseService_GetSnapshot_NeverDeletedStatusReturnsOnlyEntriesThatHaveNotBeenDeleted()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        ReverseService service = CreateService(out var clock);
         
         // Create 4 entries
-        var reverse = service.ReverseAndStore("abc");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("def");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("ghi");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("jkl");
-        reverse.ok.Should().BeTrue();
+        CreateEntries(service, "abc", "def", "ghi", "jkl");
         
         // Grab the snapshot
         var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
@@ -414,18 +386,10 @@ public class UnitTest1
     [Fact]
     public void ReverseService_GetSnapshot_RestoredEntriesReturnWhenActiveButNotNeverDeleted()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        var service = CreateService(out var clock);
         
         // Create 4 entries
-        var reverse = service.ReverseAndStore("abc");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("def");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("ghi");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("jkl");
-        reverse.ok.Should().BeTrue();
+        CreateEntries(service, "abc", "def", "ghi", "jkl");
         
         // Grab the snapshot
         var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
@@ -468,18 +432,11 @@ public class UnitTest1
     [Fact]
     public void ReverseService_GetSnapshot_EverDeletedStatusReturnsBothCurrentlyDeletedAndRestoredEntries()
     {
-        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
-        var service = new ReverseService(clock);
+        var service = CreateService(out var clock);
         
         // Create 4 entries
-        var reverse = service.ReverseAndStore("abc");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("def");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("ghi");
-        reverse.ok.Should().BeTrue();
-        reverse = service.ReverseAndStore("jkl");
-        reverse.ok.Should().BeTrue();
+        CreateEntries(service, "abc", "def", "ghi", "jkl");
+
         
         // Grab the snapshot
         var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
