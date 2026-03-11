@@ -56,6 +56,9 @@ public class ReverseService
             case HistoryStatus.EverDeleted:
                 snapshot.RemoveAll(x => x.LastDeletedUTC == null);
                 break;
+            case HistoryStatus.NeverDeleted:
+                snapshot.RemoveAll(x => x.LastDeletedUTC != null);
+                break;
             case null:
                 if (!includeDeleted)
                     snapshot.RemoveAll(x => x.IsDeleted);

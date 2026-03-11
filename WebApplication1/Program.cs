@@ -62,8 +62,10 @@ app.MapGet("/history", (int? limit, string? order, string? status, bool? include
             statusEnum = HistoryStatus.Deleted;
         else if (statusText == "everdeleted")
             statusEnum = HistoryStatus.EverDeleted;
+        else if (statusText == "neverdeleted")
+            statusEnum = HistoryStatus.NeverDeleted;
         else
-            return Results.BadRequest(new { error = "validation_failed", message = "Status must be either 'active', 'deleted' or 'everdeleted'." });
+            return Results.BadRequest(new { error = "validation_failed", message = "Status must be either 'active', 'deleted', 'everdeleted', or 'neverdeleted'." });
     }
     // Snapshot read prevents exposing internal list
     var history = service.GetHistorySnapshot(limit, historyOrder, statusEnum, includeDeleted ?? false);

@@ -363,4 +363,147 @@ public class UnitTest1
         snapshot.Should().Contain(x => x.Id == del1.Item1.Id);
         snapshot.Should().Contain(x => x.Id == del2.Item1.Id);
     }
+
+    [Fact]
+    public void ReverseService_GetSnapshot_NeverDeletedStatusReturnsOnlyEntriesThatHaveNotBeenDeleted()
+    {
+        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
+        var service = new ReverseService(clock);
+        
+        // Create 4 entries
+        var reverse = service.ReverseAndStore("abc");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("def");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("ghi");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("jkl");
+        reverse.ok.Should().BeTrue();
+        
+        // Grab the snapshot
+        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        snapshot.Count.Should().Be(4);
+        
+        var neverDeleted1 = snapshot[0];
+        var neverDeleted2 = snapshot[2];
+        
+        //Delete the 2nd and 4th items
+        var del1 = service.DeleteHistoryItem(snapshot[1].Id);
+        del1.Item1.Should().NotBeNull();
+        var del2 = service.DeleteHistoryItem(snapshot[3].Id);
+        del2.Item1.Should().NotBeNull();
+        
+        // Restore the 2 deleted items
+        var restore1 = service.RestoreHistoryItem(del1.Item1!.Id);
+        restore1.Item1.Should().NotBeNull();
+        restore1.Item2.Should().BeFalse();
+        var restore2 = service.RestoreHistoryItem(del2.Item1!.Id);
+        restore2.Item1.Should().NotBeNull();
+        restore2.Item2.Should().BeFalse();
+        
+        // Get snapshot again with NeverDeleted status and ensure restored items are not returned
+        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.NeverDeleted, includeDeleted: false);
+        snapshot.Count.Should().Be(2);
+        snapshot.Should().Contain(x => x.Id == neverDeleted1.Id);
+        snapshot.Should().Contain(x => x.Id == neverDeleted2.Id);
+        snapshot.Should().NotContain(x => x.Id == restore1.Item1!.Id);
+        snapshot.Should().NotContain(x => x.Id == restore2.Item1!.Id);
+        snapshot.Should().NotContain(x => x.LastDeletedUTC != null);
+    }
+    
+    [Fact]
+    public void ReverseService_GetSnapshot_RestoredEntriesReturnWhenActiveButNotNeverDeleted()
+    {
+        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
+        var service = new ReverseService(clock);
+        
+        // Create 4 entries
+        var reverse = service.ReverseAndStore("abc");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("def");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("ghi");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("jkl");
+        reverse.ok.Should().BeTrue();
+        
+        // Grab the snapshot
+        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        snapshot.Count.Should().Be(4);
+        
+        var neverDeleted1 = snapshot[0];
+        var neverDeleted2 = snapshot[2];
+        
+        //Delete the 2nd and 4th items
+        var del1 = service.DeleteHistoryItem(snapshot[1].Id);
+        del1.Item1.Should().NotBeNull();
+        var del2 = service.DeleteHistoryItem(snapshot[3].Id);
+        del2.Item1.Should().NotBeNull();
+        
+        // Restore the 2 deleted items
+        var restore1 = service.RestoreHistoryItem(del1.Item1!.Id);
+        restore1.Item1.Should().NotBeNull();
+        restore1.Item2.Should().BeFalse();
+        var restore2 = service.RestoreHistoryItem(del2.Item1!.Id);
+        restore2.Item1.Should().NotBeNull();
+        restore2.Item2.Should().BeFalse();
+        
+        // Get snapshot again with NeverDeleted status and ensure the 2 restored items are not returend
+        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.NeverDeleted, includeDeleted: false);
+        snapshot.Count.Should().Be(2);
+        snapshot.Should().Contain(x => x.Id == neverDeleted1.Id);
+        snapshot.Should().Contain(x => x.Id == neverDeleted2.Id);
+        snapshot.Should().NotContain(x => x.Id == restore1.Item1!.Id);
+        snapshot.Should().NotContain(x => x.Id == restore2.Item1!.Id);
+        snapshot.Should().NotContain(x => x.LastDeletedUTC != null);
+        
+        // Get snapshot again with Active and ensure the two restored entries are returned
+        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        snapshot.Count.Should().Be(4);
+        snapshot.Should().Contain(x => x.Id == restore1.Item1.Id);
+        snapshot.Should().Contain(x => x.Id == restore2.Item1.Id);
+        snapshot.Should().NotContain(x => x.IsDeleted == true);
+    }
+    
+    [Fact]
+    public void ReverseService_GetSnapshot_EverDeletedStatusReturnsBothCurrentlyDeletedAndRestoredEntries()
+    {
+        var clock = new FakeClock{UtcNow = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)};
+        var service = new ReverseService(clock);
+        
+        // Create 4 entries
+        var reverse = service.ReverseAndStore("abc");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("def");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("ghi");
+        reverse.ok.Should().BeTrue();
+        reverse = service.ReverseAndStore("jkl");
+        reverse.ok.Should().BeTrue();
+        
+        // Grab the snapshot
+        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        snapshot.Count.Should().Be(4);
+        
+        var neverDeleted1 = snapshot[0];
+        var neverDeleted2 = snapshot[2];
+        
+        //Delete the 2nd and 4th items
+        var del1 = service.DeleteHistoryItem(snapshot[1].Id);
+        del1.Item1.Should().NotBeNull();
+        var del2 = service.DeleteHistoryItem(snapshot[3].Id);
+        del2.Item1.Should().NotBeNull();
+        
+        // Restore one item
+        var restore1 = service.RestoreHistoryItem(del1.Item1!.Id);
+        restore1.Item1.Should().NotBeNull();
+        restore1.Item2.Should().BeFalse();
+        
+        // Get snapshot again with EverDeleted should return both the deleted item and the restored item
+        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.EverDeleted, includeDeleted: false);
+        snapshot.Count.Should().Be(2);
+        snapshot.Should().Contain(x => x.Id == del2.Item1.Id);
+        snapshot.Should().Contain(x => x.Id == restore1.Item1.Id);
+        snapshot.Should().NotContain(x => x.LastDeletedUTC == null);
+    }
 }

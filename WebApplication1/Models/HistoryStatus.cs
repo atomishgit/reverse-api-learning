@@ -4,5 +4,6 @@ public enum HistoryStatus
 {
     Active,
     Deleted,
-    EverDeleted
+    EverDeleted,
+    NeverDeleted
 }
