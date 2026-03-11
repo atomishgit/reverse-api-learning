@@ -2,22 +2,15 @@
 
 namespace WebApplication1.Services;
 
-public class ReverseService
+public class ReverseService(
+    IClock clock)
 {
-    private readonly IClock _clock;
     private readonly List<HistoryEntry> _history = new();
     
     private readonly object _historyLock = new();
 
-    public ReverseService(IClock clock)
-    {
-        _clock = clock;
-    }
-
     public (bool ok, string? reversed, string? message) ReverseAndStore(string text)
     {
-        
-        
         // If character count is greater than 100, return error message
         if (text.Length > 100)
             return (false, null, "Maximum length is 100 characters.");
@@ -30,13 +23,13 @@ public class ReverseService
         lock (_historyLock)
         {
             //_history.Add($"'{text}' reversed to '{reversed}'");
-            _history.Add(new HistoryEntry(Guid.NewGuid(),text, reversed, text.Length, _clock.UtcNow));
+            _history.Add(new HistoryEntry(Guid.NewGuid(),text, reversed, text.Length, clock.UtcNow));
         }
         
         return (true, reversed, "Success.");
     }
     
-    public List<HistoryEntry> GetHistorySnapshot(int? limit, HistoryOrder order, HistoryStatus? status = null, bool includeDeleted = false)
+    public List<HistoryEntry> GetHistorySnapshot(int? limit, HistoryOrder order, HistoryStatus? status = null, string? query = null, bool includeDeleted = false)
     {
         List<HistoryEntry> snapshot;
         
@@ -46,10 +39,11 @@ public class ReverseService
         }
         
         // Apply status filter
-        var filtered = ApplyHistoryFilter(snapshot, status, includeDeleted);
-        
-        // Return filtered list after applying ordering and limit filters
-        return ApplyOrderingAndLimit(filtered, order, limit);
+        // var filtered = ApplyHistoryFilter(snapshot, status, includeDeleted);
+        //
+        // var queried = ApplyQueryFilter(filtered, query);
+        // // Return filtered list after applying ordering and limit filters
+        return ApplyOrderingAndLimit(ApplyQueryFilter(ApplyHistoryFilter(snapshot, status, includeDeleted), query), order, limit);
     }
 
     public HistoryEntry? GetHistoryItem(Guid id, bool includeDeleted = false)
@@ -66,7 +60,7 @@ public class ReverseService
     }
     public (int removed, int remaining) ClearActiveHistoryItemsOlderThan(TimeSpan age)
     {
-        var cutoff = _clock.UtcNow - age;
+        var cutoff = clock.UtcNow - age;
         
         lock (_historyLock)
         {
@@ -90,7 +84,7 @@ public class ReverseService
             if (alreadyDeleted)
                 return (entry, true);
             
-            var deleted = entry with {IsDeleted = true, DeletedUTC = _clock.UtcNow, LastDeletedUTC = _clock.UtcNow};
+            var deleted = entry with {IsDeleted = true, DeletedUTC = clock.UtcNow, LastDeletedUTC = clock.UtcNow};
             
             // Remove the old deleted history entry and add the updated one
             _history[index] = deleted;
@@ -141,5 +135,13 @@ public class ReverseService
 
         // Return the snapshot, limited to the first N (limit) items
         return limit.HasValue ? ordered.Take(limit.Value).ToList() : ordered.ToList();
+    }
+
+    private static List<HistoryEntry> ApplyQueryFilter(List<HistoryEntry> snapshot, string? query)
+    {
+        if (!string.IsNullOrWhiteSpace(query) && query.Length > 0)
+            return snapshot.Where(x => x.Original.Contains(query, StringComparison.OrdinalIgnoreCase) || x.Reversed.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        
+        return snapshot;
     }
 }

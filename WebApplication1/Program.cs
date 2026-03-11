@@ -32,7 +32,7 @@ app.MapGet("/ping", () => Results.Ok(new
     utc =DateTime.UtcNow
 }));
 
-app.MapGet("/history", (int? limit, string? order, string? status, bool? includeDeleted, ReverseService service) =>
+app.MapGet("/history", (int? limit, string? order, string? status, string query, bool? includeDeleted, ReverseService service) =>
 {
     // Parse HTTP request tokens
     //order must be "asc" or "desc"
@@ -64,7 +64,7 @@ app.MapGet("/history", (int? limit, string? order, string? status, bool? include
             return Results.BadRequest(new { error = "validation_failed", message = "Status must be either 'active', 'deleted', 'everdeleted', or 'neverdeleted'." });
     }
     // Snapshot read prevents exposing internal list
-    var history = service.GetHistorySnapshot(limit, historyOrder, statusEnum, includeDeleted ?? false);
+    var history = service.GetHistorySnapshot(limit, historyOrder, statusEnum, query, includeDeleted ?? false);
 
     return Results.Ok(new
     {
