@@ -110,3 +110,4 @@ C:\Users\adamm\RiderProjects\WebApplication1\WebApplication1.Tests\obj\Debug\net
 C:\Users\adamm\RiderProjects\WebApplication1\WebApplication1.Tests\obj\Debug\net10.0\WebApplication1.Tests.pdb
 C:\Users\adamm\RiderProjects\WebApplication1\WebApplication1.Tests\obj\Debug\net10.0\WebApplication1.Tests.genruntimeconfig.cache
 C:\Users\adamm\RiderProjects\WebApplication1\WebApplication1.Tests\obj\Debug\net10.0\ref\WebApplication1.Tests.dll
+C:\Users\adamm\RiderProjects\WebApplication1\WebApplication1.Tests\obj\Debug\net10.0\WebApplication1.Tests.sourcelink.json

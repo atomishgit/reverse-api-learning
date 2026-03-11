@@ -36,7 +36,7 @@ public class ReverseService
         return (true, reversed, "Success.");
     }
     
-    public List<HistoryEntry> GetHistorySnapshot(int? limit, HistoryOrder order, bool includeDeleted = false)
+    public List<HistoryEntry> GetHistorySnapshot(int? limit, HistoryOrder order, HistoryStatus? status = null, bool includeDeleted = false)
     {
         List<HistoryEntry> snapshot;
         
@@ -45,11 +45,25 @@ public class ReverseService
             snapshot = new List<HistoryEntry>(_history);
         }
         
-        // Remove any entries from the snapshot where isDeleted is true
-        if (!includeDeleted)
-            snapshot.RemoveAll(x => x.IsDeleted);
+        switch (status)
+        {
+            case HistoryStatus.Active:
+                snapshot.RemoveAll(x => x.IsDeleted);
+                break;
+            case HistoryStatus.Deleted:
+                snapshot.RemoveAll(x => !x.IsDeleted);
+                break;
+            case HistoryStatus.EverDeleted:
+                snapshot.RemoveAll(x => x.LastDeletedUTC == null);
+                break;
+            case null:
+                if (!includeDeleted)
+                    snapshot.RemoveAll(x => x.IsDeleted);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(status), status, null);
+        }
         
-       
         var ordered = order == HistoryOrder.Asc 
             ? snapshot.OrderBy(x => x.CreatedUTC).ThenBy(x => x.Id) 
             : snapshot.OrderByDescending(x => x.CreatedUTC).ThenByDescending(x => x.Id);
