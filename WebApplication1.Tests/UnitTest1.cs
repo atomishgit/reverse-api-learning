@@ -611,5 +611,113 @@ public class UnitTest1
         //snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Deleted, "ef", includeDeleted: false);
         snapshot.Count.Should().Be(1);
     }
-    
+
+    [Fact]
+    public void HistoryQueryFactory_BuildHistoryQuery_MinLengthGreaterThanMaxLengthReturnsError()
+    {
+        var service = CreateService(out var clock);
+        
+        CreateEntries(service, "abcd", "efgh", "ijkl", "mnop");
+        
+        // Build HistoryQuery
+        var result = HistoryQueryFactory.BuildHistoryQuery(
+            limit: null,
+            order: "desc",
+            status: null,
+            query: null,
+            includeDeleted: false,
+            minLength: 5,
+            maxLength: 3
+        );
+        
+        result.ok.Should().BeFalse();
+        result.options.Should().BeNull();
+        result.message.Should().Be("MinLength should be less than or equal to MaxLength");
+    }
+
+    [Fact]
+    public void HistoryQueryFactory_BuildHistoryQuery_ZeroLengthIsValid()
+    {
+        var service = CreateService(out var clock);
+        
+        CreateEntries(service, "abc", "def", "ghi", "jkl");
+        
+        // Build HistoryQuery
+        var result = HistoryQueryFactory.BuildHistoryQuery(
+            limit: null,
+            order: "desc",
+            status: null,
+            query: null,
+            includeDeleted: false,
+            minLength: 0,
+            maxLength: 3
+        );
+        
+        result.ok.Should().BeTrue();
+        result.options.Should().NotBeNull();
+        result.message.Should().Be("Query built successfully");
+    }
+
+    [Fact]
+    public void HistoryQueueFactory_BuildHistoryQueue_MinAndMaxLengthAreInclusivelyValid()
+    {
+        var service = CreateService(out var clock);
+        
+        CreateEntries(service, "ab", "def", "ghijk", "lmnopq");
+        
+        // Build HistoryQuery
+        var result = HistoryQueryFactory.BuildHistoryQuery(
+            limit: null,
+            order: "desc",
+            status: null,
+            query: null,
+            includeDeleted: false,
+            minLength: 3,
+            maxLength: 5
+        );
+        
+        result.ok.Should().BeTrue();
+        result.options.Should().NotBeNull();
+        result.message.Should().Be("Query built successfully");
+        
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, minLength: 3, maxLength: 5);
+        snapshot.Count.Should().Be(2);
+        snapshot.Should().Contain(x => x.Original == "def");
+        snapshot.Should().Contain(x => x.Original == "ghijk");
+    }
+
+    [Fact]
+    public void HistoryQueueFactory_BuildHistoryQueue_CombinedFiltersWorkProperly()
+    {
+        var service = CreateService(out var clock);
+        
+        CreateEntries(service, "ab", "def", "abcde", "lmnopq", "rstuv", "wxyz");
+        
+        var itemToDeleteId = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, query: "abcde", includeDeleted: false).First().Id;
+
+        var deleted = service.DeleteHistoryItem(itemToDeleteId);
+        
+        itemToDeleteId = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Deleted, query: "ab", includeDeleted: false).First().Id;
+        
+        var deleted2 = service.DeleteHistoryItem(itemToDeleteId);
+        
+        // Build HistoryQuery
+        var result = HistoryQueryFactory.BuildHistoryQuery(
+            limit: null,
+            order: "desc",
+            status: "deleted",
+            query: "ab",
+            includeDeleted: false,
+            minLength: 3,
+            maxLength: 5
+        );
+        
+        result.ok.Should().BeTrue();
+        result.options.Should().NotBeNull();
+        result.message.Should().Be("Query built successfully");
+        
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Deleted, query: "ab", minLength: 3, maxLength: 5);
+        snapshot.Count.Should().Be(1);
+        snapshot.Should().Contain(x => x.Original == "abcde");
+    }
 }
