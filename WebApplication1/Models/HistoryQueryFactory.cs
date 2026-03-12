@@ -54,13 +54,29 @@ public class HistoryQueryFactory
         if (string.IsNullOrWhiteSpace(status))
             return true;
         
-        if(!Enum.TryParse<HistoryStatus>(status, ignoreCase: true, out var parseResult))
+        if(!Enum.TryParse<HistoryStatus>(status, ignoreCase: true, out var parseResult) ||
+                !Enum.IsDefined(typeof(HistoryStatus), parseResult))
             return false;
         
         if (!Enum.IsDefined(typeof(HistoryStatus), parseResult))
             return false;
         
         parsedStatus = parseResult;
+        return true;
+    }
+
+    private static bool TryParseOrder(string? order, out HistoryOrder? parsedOrder)
+    {
+        parsedOrder = null;
+
+        if (string.IsNullOrWhiteSpace(order))
+            return true;
+
+        if (!Enum.TryParse<HistoryOrder>(order, ignoreCase: true, out var orderResult) ||
+                !Enum.IsDefined(typeof(HistoryOrder), orderResult))
+            return false;
+
+        parsedOrder = orderResult;
         return true;
     }
 }

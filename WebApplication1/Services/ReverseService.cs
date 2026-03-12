@@ -155,17 +155,17 @@ public class ReverseService(
         if (minLength.HasValue && maxLength.HasValue)
         {
             // return only the items whose original text is between min and max lenght, inclusive
-            return snapshot.Where(x => x.Original.Length >= minLength && x.Original.Length <= maxLength).ToList();
+            return snapshot.Where(x => x.Length >= minLength && x.Length <= maxLength).ToList();
         }
         else if (minLength.HasValue)
         {
             // return only the items whose original text is greater than or equal to min length
-            return snapshot.Where(x => x.Original.Length >= minLength).ToList();
+            return snapshot.Where(x => x.Length >= minLength).ToList();
         }
         else if (maxLength.HasValue)
         {
             // return only the items whose original text is less than or equal to max length
-            return snapshot.Where(x => x.Original.Length <= maxLength).ToList();
+            return snapshot.Where(x => x.Length <= maxLength).ToList();
         }
         else
         {
