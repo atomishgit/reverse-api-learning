@@ -23,7 +23,7 @@ public class ReverseService(
         lock (_historyLock)
         {
             //_history.Add($"'{text}' reversed to '{reversed}'");
-            _history.Add(new HistoryEntry(Guid.NewGuid(),text, reversed, text.Length, clock.UtcNow));
+            _history.Add(new HistoryEntry(Guid.NewGuid(),text, reversed, clock.UtcNow));
         }
         
         return (true, reversed, "Success.");
@@ -119,7 +119,7 @@ public class ReverseService(
         }
     }
 
-    private static List<HistoryEntry> ApplyHistoryFilter(List<HistoryEntry> snapshot, HistoryStatus? status, bool? includeDeleted = false)
+    private static List<HistoryEntry> ApplyHistoryFilter(List<HistoryEntry> snapshot, HistoryStatus? status, bool includeDeleted = false)
     {
         return status switch
         {
@@ -127,12 +127,12 @@ public class ReverseService(
             HistoryStatus.Deleted => snapshot.Where(x => x.IsDeleted).ToList(),
             HistoryStatus.EverDeleted => snapshot.Where(x => x.LastDeletedUTC != null).ToList(),
             HistoryStatus.NeverDeleted => snapshot.Where(x => x.LastDeletedUTC == null).ToList(),
-            null => includeDeleted != null && (bool)includeDeleted ? snapshot : snapshot.Where(x => !x.IsDeleted).ToList(),
+            null => includeDeleted ? snapshot : snapshot.Where(x => !x.IsDeleted).ToList(),
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
     }
 
-    private static List<HistoryEntry> ApplyOrderingAndLimit(List<HistoryEntry> snapshot, HistoryOrder? order, int? limit)
+    private static List<HistoryEntry> ApplyOrderingAndLimit(List<HistoryEntry> snapshot, HistoryOrder order, int? limit)
     {
         var ordered = order == HistoryOrder.Asc
             ? snapshot.OrderBy(x => x.CreatedUTC).ThenBy(x => x.Id)

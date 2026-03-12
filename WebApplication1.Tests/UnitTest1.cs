@@ -21,6 +21,23 @@ public class UnitTest1
             result.ok.Should().BeTrue();
         }
     }
+
+    private static List<HistoryEntry> GetSnapshot(ReverseService service, int? limit = null, HistoryOrder order = HistoryOrder.Desc,
+        HistoryStatus? status = null,  string? query = null, bool includeDeleted = false, int? minLength = null, int? maxLength = null)
+    {
+        var options = new HistoryQueryOptions(
+            limit,
+            order,
+            status,
+            query,
+            includeDeleted,
+            minLength,
+            maxLength
+        );
+
+        return service.GetHistorySnapshot(options);
+    }
+    
     [Fact]
     public void ReverseService_ReverseAndStore_EnsureCharactersLessThan100()
     {
@@ -52,8 +69,10 @@ public class UnitTest1
         var reverse = service.ReverseAndStore("abc");
         reverse.ok.Should().BeTrue();
 
+        
         // Grab the id from history
-        var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, query: null, includeDeleted: true).First();
+        var entry = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: false, query: null).First();
+        //var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, query: null, includeDeleted: true).First();
         var id = entry.Id;
 
         // Soft delete it
@@ -77,7 +96,8 @@ public class UnitTest1
         reverse.ok.Should().BeTrue();
         
         // Grab the id from history
-        var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc,query: null, includeDeleted: true).First();
+        var entry = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: true, query: null).First();
+        //var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc,query: null, includeDeleted: true).First();
         var id = entry.Id;
         
         // Soft delete it
@@ -94,7 +114,8 @@ public class UnitTest1
         ReverseService service = CreateService(out var clock);
         CreateEntries(service, "a", "b");
 
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Asc, includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Asc, includeDeleted: false);
+        //var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Asc, includeDeleted: false);
 
         snapshot[0].CreatedUTC.Should().Be(clock.UtcNow);
         snapshot[1].CreatedUTC.Should().Be(clock.UtcNow);
@@ -111,7 +132,9 @@ public class UnitTest1
         reverse.ok.Should().BeTrue();
         
         // Grab the id from history
-        var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
+        var entry = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: true).First();
+
+        //var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
         var id = entry.Id;
         
         // Soft delete it
@@ -121,7 +144,11 @@ public class UnitTest1
         del.Item1.Should().NotBeNull();
         
         // Ensure item is not visible in snapshot by default
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: false);
+
+        //var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: false);
+
+        //var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: false);
         snapshot.Should().NotContain(x => x.Id == id);
         
         // Restore it
@@ -132,7 +159,9 @@ public class UnitTest1
         restore.Item1!.DeletedUTC.Should().BeNull();
         
         // Ensure item is visible in snapshot again
-        var snapshot2 = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: false);
+        var snapshot2 = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: false);
+
+        //var snapshot2 = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: false);
         snapshot2.Should().Contain(x => x.Id == id);
     }
 
@@ -146,7 +175,9 @@ public class UnitTest1
         reverse.ok.Should().BeTrue();
         
         // Grab the id from history
-        var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
+        var entry = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: true).First();
+
+        //var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
         var id = entry.Id;
         
         // Soft delete it
@@ -162,7 +193,9 @@ public class UnitTest1
         cleared.removed.Should().Be(0);
         
         // Get snapshot again and ensure deleted item is still there
-        var snapshot  = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: true);
+
+        //var snapshot  = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true);
         
         snapshot.Should().ContainSingle(x => x.Id == id);
         snapshot.Single(x => x.Id == id).IsDeleted.Should().BeTrue();
@@ -181,7 +214,9 @@ public class UnitTest1
         reverse.ok.Should().BeTrue();
         
         // Grab the id from history
-        var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
+        var entry = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: true).First();
+
+            //var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
         var id = entry.Id;
         
         // Restore the item
@@ -201,7 +236,9 @@ public class UnitTest1
         reverse.ok.Should().BeTrue();
         
         // Grab the id from history
-        var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
+        var entry = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: true).First();
+
+        //var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
         var id = entry.Id;
         
         // Delete the item
@@ -223,7 +260,9 @@ public class UnitTest1
         reverse.ok.Should().BeTrue();
         
         // Grab the id from history
-        var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
+        var entry = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: true).First();
+
+        //var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
         var id = entry.Id;
         
         // Delete the item
@@ -250,7 +289,9 @@ public class UnitTest1
         reverse.ok.Should().BeTrue();
         
         // Grab the id from history
-        var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
+        var entry = GetSnapshot(service, order: HistoryOrder.Desc, includeDeleted: true).First();
+
+        // var entry = service.GetHistorySnapshot(null, HistoryOrder.Desc, includeDeleted: true).First();
         var id = entry.Id;
         
         // Delete the item
@@ -276,7 +317,9 @@ public class UnitTest1
        CreateEntries(service, "abc", "def", "ghi");
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
         snapshot.Count.Should().Be(3);
         
         //Delete the middle item
@@ -284,7 +327,9 @@ public class UnitTest1
         del.Item1.Should().NotBeNull();
         
         // Get snapshot again with active status and ensure the middle item is not returned
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+         snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        // snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
         snapshot.Count.Should().Be(2);
         snapshot.Should().NotContain(x => x.Id == del.Item1.Id);
     }
@@ -298,7 +343,9 @@ public class UnitTest1
         CreateEntries(service, "abc", "def", "ghi");
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
         snapshot.Count.Should().Be(3);
         
         //Delete the middle item
@@ -306,7 +353,9 @@ public class UnitTest1
         del.Item1.Should().NotBeNull();
         
         // Get snapshot again with deleted status and ensure the middle item is the only one returned
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Deleted, includeDeleted: false);
+        snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Deleted, includeDeleted: false);
+
+        // snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Deleted, includeDeleted: false);
         snapshot.Count.Should().Be(1);
         snapshot.Should().Contain(x => x.Id == del.Item1.Id);
     }
@@ -320,7 +369,9 @@ public class UnitTest1
         CreateEntries(service, "abc", "def", "ghi", "jkl");
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
         snapshot.Count.Should().Be(4);
         
         //Delete the 2nd and 4th items
@@ -338,7 +389,9 @@ public class UnitTest1
         restore2.Item2.Should().BeFalse();
         
         // Get snapshot again with EverDeleted status and ensure only the previously deleted 2nd and 4th items are inthe list
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.EverDeleted, includeDeleted: false);
+        snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.EverDeleted, includeDeleted: false);
+
+        // snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.EverDeleted, includeDeleted: false);
         snapshot.Count.Should().Be(2);
         snapshot.Should().Contain(x => x.Id == del1.Item1.Id);
         snapshot.Should().Contain(x => x.Id == del2.Item1.Id);
@@ -353,7 +406,9 @@ public class UnitTest1
         CreateEntries(service, "abc", "def", "ghi", "jkl");
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
         snapshot.Count.Should().Be(4);
         
         var neverDeleted1 = snapshot[0];
@@ -374,7 +429,9 @@ public class UnitTest1
         restore2.Item2.Should().BeFalse();
         
         // Get snapshot again with NeverDeleted status and ensure restored items are not returned
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.NeverDeleted, includeDeleted: false);
+        snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.NeverDeleted, includeDeleted: false);
+
+        // snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.NeverDeleted, includeDeleted: false);
         snapshot.Count.Should().Be(2);
         snapshot.Should().Contain(x => x.Id == neverDeleted1.Id);
         snapshot.Should().Contain(x => x.Id == neverDeleted2.Id);
@@ -392,7 +449,9 @@ public class UnitTest1
         CreateEntries(service, "abc", "def", "ghi", "jkl");
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
         snapshot.Count.Should().Be(4);
         
         var neverDeleted1 = snapshot[0];
@@ -413,7 +472,9 @@ public class UnitTest1
         restore2.Item2.Should().BeFalse();
         
         // Get snapshot again with NeverDeleted status and ensure the 2 restored items are not returend
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.NeverDeleted, includeDeleted: false);
+        snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.NeverDeleted, includeDeleted: false);
+
+        // snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.NeverDeleted, includeDeleted: false);
         snapshot.Count.Should().Be(2);
         snapshot.Should().Contain(x => x.Id == neverDeleted1.Id);
         snapshot.Should().Contain(x => x.Id == neverDeleted2.Id);
@@ -422,7 +483,9 @@ public class UnitTest1
         snapshot.Should().OnlyContain(x => x.LastDeletedUTC == null);
         
         // Get snapshot again with Active and ensure the two restored entries are returned
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        // snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
         snapshot.Count.Should().Be(4);
         snapshot.Should().Contain(x => x.Id == restore1.Item1.Id);
         snapshot.Should().Contain(x => x.Id == restore2.Item1.Id);
@@ -439,7 +502,11 @@ public class UnitTest1
 
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        // var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+
+        //var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, includeDeleted: false);
         snapshot.Count.Should().Be(4);
         
         var neverDeleted1 = snapshot[0];
@@ -457,7 +524,11 @@ public class UnitTest1
         restore1.Item2.Should().BeFalse();
         
         // Get snapshot again with EverDeleted should return both the deleted item and the restored item
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.EverDeleted, includeDeleted: false);
+        snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.EverDeleted, includeDeleted: false);
+
+       // var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.EverDeleted, includeDeleted: false);
+
+       // snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.EverDeleted, includeDeleted: false);
         snapshot.Count.Should().Be(2);
         snapshot.Should().Contain(x => x.Id == del2.Item1.Id);
         snapshot.Should().Contain(x => x.Id == restore1.Item1.Id);
@@ -473,11 +544,15 @@ public class UnitTest1
         CreateEntries(service, "Hello");
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "he", includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, query: "he", includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "he", includeDeleted: false);
         snapshot.Count.Should().Be(1);
         snapshot[0].Original.Should().Be("Hello");
         
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "EL", includeDeleted: false);
+        snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, query: "EL", includeDeleted: false);
+
+        // snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "EL", includeDeleted: false);
         snapshot.Count.Should().Be(1);
         snapshot[0].Original.Should().Be("Hello");
     }
@@ -491,7 +566,9 @@ public class UnitTest1
         CreateEntries(service, "Hello");
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "OLL", includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, query: "OLL", includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "OLL", includeDeleted: false);
         snapshot.Count.Should().Be(1);
         snapshot[0].Reversed.Should().Be("olleH");
     }
@@ -505,7 +582,9 @@ public class UnitTest1
         CreateEntries(service, "abcd", "efgh", "ijkl");
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "  ", includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, query: " ", includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "  ", includeDeleted: false);
         snapshot.Count.Should().Be(3);
     }
 
@@ -518,12 +597,18 @@ public class UnitTest1
         CreateEntries(service, "abcd", "efgh", "ijkl", "mnop");
         
         //Delete efgh entry
-        var del = service.DeleteHistoryItem(service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "ef", includeDeleted: false).First().Id);
+        var hisotyItemID = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, query: "ef", includeDeleted: false).First().Id;
+        //var historyItemId = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "ef", includeDeleted: false).First().Id;
+        var del = service.DeleteHistoryItem(hisotyItemID);
         
         // Grab the snapshot
-        var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "ef", includeDeleted: false);
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, query: "ef", includeDeleted: false);
+
+        // var snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Active, "ef", includeDeleted: false);
         snapshot.Count.Should().Be(0);
-        snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Deleted, "ef", includeDeleted: false);
+        
+        snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Deleted, query: "ef", includeDeleted: false);
+        //snapshot = service.GetHistorySnapshot(null, HistoryOrder.Desc, HistoryStatus.Deleted, "ef", includeDeleted: false);
         snapshot.Count.Should().Be(1);
     }
     

@@ -34,14 +34,8 @@ app.MapGet("/ping", () => Results.Ok(new
 
 app.MapGet("/history", (int? limit, string? order, string? status, string? query, int? minLength, int? maxLength, bool? includeDeleted, ReverseService service) =>
 {
-    // Parse HTTP request tokens
-    //order must be "asc" or "desc"
-    order ??= "desc";
-    
-    var historyOrder = order == "asc" ? HistoryOrder.Asc : HistoryOrder.Desc;
-    
     // Setup query
-    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(limit, historyOrder, status, query, includeDeleted, minLength, maxLength);
+    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(limit, order, status, query, includeDeleted, minLength, maxLength);
 
     if (queryOutput is { ok: true, options: not null })
     {

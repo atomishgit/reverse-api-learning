@@ -2,9 +2,9 @@
 
 public record HistoryQueryOptions(
     int? Limit,
-    HistoryOrder? Order,
+    HistoryOrder Order,
     HistoryStatus? Status,
     string? Query,
-    bool? IncludeDeleted,
+    bool IncludeDeleted,
     int? MinLength,
     int? MaxLength);

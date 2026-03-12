@@ -3,14 +3,18 @@
 public class HistoryQueryFactory
 {
     public static (bool ok, HistoryQueryOptions? options, string? message) 
-        BuildHistoryQuery(int? limit, HistoryOrder? order, string? status, string? query, bool? includeDeleted, int? minLength, int? maxLength)
+        BuildHistoryQuery(int? limit, string? order, string? status, string? query, bool? includeDeleted, int? minLength, int? maxLength)
     {
         //================
         //Validation Begin
         //================
         
-        // order should be Asc or Desc
-        if (order != HistoryOrder.Asc && order != HistoryOrder.Desc)
+        
+        //order must be "asc" or "desc"
+        order ??= "desc";
+    
+        // var historyOrder is HistoryOrder.Asc if order = asc, HistoryOrder.Desc if order = desc, otherwise return false
+        if (!Enum.TryParse<HistoryOrder>(order, ignoreCase: true, out var historyOrder))
             return (false, null, "Order should be asc or desc");
         
         // status should be an allowed value, instantiates a parsedStatus value if validated
@@ -33,11 +37,14 @@ public class HistoryQueryFactory
         if (minLength != null && maxLength != null && minLength > maxLength)
             return (false, null, "MinLength should be less than or equal to MaxLength");
         
+        // If includeDeleted is null, default to false
+        var includeDeletedValue = includeDeleted ?? false;
+        
         //================
         //Validation End
         //================
         
-        return (true, new HistoryQueryOptions(limit, order, parsedStatus, query, includeDeleted, minLength, maxLength), "Query built successfully");
+        return (true, new HistoryQueryOptions(limit, historyOrder, parsedStatus, query, includeDeletedValue, minLength, maxLength), "Query built successfully");
     }
 
     private static bool TryParseStatus(string? status, out HistoryStatus? parsedStatus)

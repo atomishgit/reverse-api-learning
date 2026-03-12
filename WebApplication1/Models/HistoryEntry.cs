@@ -4,8 +4,10 @@ public record HistoryEntry(
     Guid Id, 
     string Original, 
     string Reversed, 
-    int Length, 
     DateTime CreatedUTC,
     bool IsDeleted = false,
     DateTime? DeletedUTC = null,
-    DateTime? LastDeletedUTC = null);
+    DateTime? LastDeletedUTC = null)
+{
+    public int Length => Original.Length;
+}
