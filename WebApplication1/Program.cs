@@ -32,45 +32,31 @@ app.MapGet("/ping", () => Results.Ok(new
     utc =DateTime.UtcNow
 }));
 
-app.MapGet("/history", (int? limit, string? order, string? status, string query, bool? includeDeleted, ReverseService service) =>
+app.MapGet("/history", (int? limit, string? order, string? status, string? query, int? minLength, int? maxLength, bool? includeDeleted, ReverseService service) =>
 {
     // Parse HTTP request tokens
     //order must be "asc" or "desc"
     order ??= "desc";
     
-    if (order != "asc" && order != "desc")
-        return Results.BadRequest(new { error = "validation_failed", message = "Order must be either 'asc' or 'desc'." });
-    
     var historyOrder = order == "asc" ? HistoryOrder.Asc : HistoryOrder.Desc;
     
-    // limit must be greater than 0
-    if (limit.HasValue && limit <= 0)
-        return Results.BadRequest(new { error = "validation_failed", message = "Limit must be greater than 0." });
-    
-    // status must be active, deleted or everdeleted if it has a value
-    HistoryStatus? statusEnum = null;
-    if (status is not null)
-    {
-        var statusText = status.ToLower();
-        if (statusText == "active")
-            statusEnum = HistoryStatus.Active;
-        else if (statusText == "deleted")
-            statusEnum = HistoryStatus.Deleted;
-        else if (statusText == "everdeleted")
-            statusEnum = HistoryStatus.EverDeleted;
-        else if (statusText == "neverdeleted")
-            statusEnum = HistoryStatus.NeverDeleted;
-        else
-            return Results.BadRequest(new { error = "validation_failed", message = "Status must be either 'active', 'deleted', 'everdeleted', or 'neverdeleted'." });
-    }
-    // Snapshot read prevents exposing internal list
-    var history = service.GetHistorySnapshot(limit, historyOrder, statusEnum, query, includeDeleted ?? false);
+    // Setup query
+    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(limit, historyOrder, status, query, includeDeleted, minLength, maxLength);
 
-    return Results.Ok(new
+    if (queryOutput is { ok: true, options: not null })
     {
-        count = history.Count,
-        items = history
-    });
+        List<HistoryEntry> history = service.GetHistorySnapshot(queryOutput.options);
+
+        return Results.Ok(new
+        {
+            count = history.Count,
+            items = history
+        });
+    }
+    else
+    {
+        return Results.BadRequest(new { error = "validation_failed", message = queryOutput.message });
+    }
 });
 
 app.MapGet("/history/{id:guid}", (Guid id, bool? includeDeleted, ReverseService service) =>
