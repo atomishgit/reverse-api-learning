@@ -9,11 +9,11 @@ public class ReverseService(
     
     private readonly object _historyLock = new();
 
-    public (bool ok, string? reversed, string? message) ReverseAndStore(string text)
+    public (bool ok, string? reversed, ApiError? error) ReverseAndStore(string text)
     {
         // If character count is greater than 100, return error message
         if (text.Length > 100)
-            return (false, null, "Maximum length is 100 characters.");
+            return (false, null, new ApiError("validation_failed", ApiErrorCodes.TextTooLong, "Maximum length is 100 characters."));
         
         var chars = text.ToCharArray();
         
@@ -26,7 +26,7 @@ public class ReverseService(
             _history.Add(new HistoryEntry(Guid.NewGuid(),text, reversed, clock.UtcNow));
         }
         
-        return (true, reversed, "Success.");
+        return (true, reversed, null);
     }
     
     public List<HistoryEntry> GetHistorySnapshot(HistoryQueryOptions options)
@@ -42,7 +42,7 @@ public class ReverseService(
         return ApplyOrderingAndLimit(snapshot, options.Order, options.Limit);
     }
 
-    public HistorySummary? GetHistorySummary(HistoryQueryOptions options)
+    public HistorySummary GetHistorySummary(HistoryQueryOptions options)
     {
         List<HistoryEntry> snapshot;
         

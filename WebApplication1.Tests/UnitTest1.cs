@@ -47,7 +47,7 @@ public class UnitTest1
             "12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901");
         
         result.ok.Should().BeFalse();
-        result.message.Should().Be("Maximum length is 100 characters.");
+        result.error.Code.Should().Be(ApiErrorCodes.TextTooLong);
     }
 
     [Fact]
@@ -610,7 +610,7 @@ public class UnitTest1
         
         result.ok.Should().BeFalse();
         result.options.Should().BeNull();
-        result.message.Should().Be("MinLength should be less than or equal to MaxLength");
+        result.error.Code.Should().Be(ApiErrorCodes.MinLLengthGreaterThanMaxLength);
     }
 
     [Fact]
@@ -633,7 +633,7 @@ public class UnitTest1
         
         result.ok.Should().BeTrue();
         result.options.Should().NotBeNull();
-        result.message.Should().Be("Query built successfully");
+        result.error.Should().BeNull();
     }
 
     [Fact]
@@ -656,7 +656,7 @@ public class UnitTest1
         
         result.ok.Should().BeTrue();
         result.options.Should().NotBeNull();
-        result.message.Should().Be("Query built successfully");
+        result.error.Should().BeNull();
         
         var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, minLength: 3, maxLength: 5);
         snapshot.Count.Should().Be(2);
@@ -691,7 +691,7 @@ public class UnitTest1
         
         result.ok.Should().BeTrue();
         result.options.Should().NotBeNull();
-        result.message.Should().Be("Query built successfully");
+        result.error.Should().BeNull();
         
         snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Deleted, query: "ab", minLength: 3, maxLength: 5);
         snapshot.Count.Should().Be(1);
@@ -734,8 +734,6 @@ public class UnitTest1
         
         CreateEntries(service, "abc", "defg", "ghijk", "abjklmnop", "qrstuvwxyz", "fauabak", "lollolab");
         
-        // Grab the snapshot
-        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
         
         // Build a query object for the string "ab"
         var queryOptions = HistoryQueryFactory.BuildHistoryQuery(null, null, null, "ab", true, null, null);
@@ -758,8 +756,6 @@ public class UnitTest1
         
         CreateEntries(service, "ab", "def", "ghijk", "abjklm");
         
-        // Grab the snapshot
-        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
         
         // Build a query object for minlength 3 and max 5
         var queryOptions = HistoryQueryFactory.BuildHistoryQuery(null, null, null, null, true, 3, 5);
@@ -780,8 +776,6 @@ public class UnitTest1
         
         CreateEntries(service, "abc", "defg", "ghijk", "abjklmnop", "qrstuvwxyz", "fauabak", "lollolab");
         
-        // Grab the snapshot
-        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
         
         // Build a query object for the string "zzz"
         var queryOptions = HistoryQueryFactory.BuildHistoryQuery(null, null, null, "zzz", true, null, null);
@@ -798,5 +792,67 @@ public class UnitTest1
         summary.AverageLength.Should().BeNull();
         summary.OldestCreatedUtc.Should().BeNull();
         summary.NewestCreatedUtc.Should().BeNull();
+    }
+
+    [Fact]
+    public void HistoryQueryFactory_BuildHistoryQuery_ReturnsStructuredErrorForInvalidRange()
+    {
+        var result = HistoryQueryFactory.BuildHistoryQuery(
+            limit: 1000,
+            order: "desc",
+            status: "deleted",
+            query: "ab",
+            includeDeleted: false,
+            minLength: 10,
+            maxLength: 5
+        );
+
+        result.ok.Should().BeFalse();
+        result.options.Should().BeNull();
+        result.error.Should().NotBeNull();
+        result.error.Error.Should().Be("validation_failed");
+        result.error.Code.Should().Be(ApiErrorCodes.MinLLengthGreaterThanMaxLength);
+    }
+    
+    [Fact]
+    public void HistoryQueryFactory_BuildHistoryQuery_ReturnsStructuredErrorForInvalidOrder()
+    {
+        var result = HistoryQueryFactory.BuildHistoryQuery(
+            limit: 1000,
+            order: "ass",
+            status: "deleted",
+            query: "ab",
+            includeDeleted: false,
+            minLength: 3,
+            maxLength: 5
+        );
+
+        result.ok.Should().BeFalse();
+        result.options.Should().BeNull();
+        result.error.Should().NotBeNull();
+        result.error.Error.Should().Be("validation_failed");
+        result.error.Code.Should().Be(ApiErrorCodes.InvalidOrder);
+    }
+
+    [Fact]
+    public void ReverseService_ReverseAndStore_RejectsTooLongTextWithStructuredError()
+    {
+        var service = CreateService(out var clock);
+        
+        var result = service.ReverseAndStore("This is a very long string that is over 100 characters long.This is a very long string that is over 100 characters long.");
+        
+        result.ok.Should().BeFalse();
+        result.error.Should().NotBeNull();
+        result.error.Error.Should().Be("validation_failed");
+        result.error.Code.Should().Be(ApiErrorCodes.TextTooLong);
+    }
+
+    [Fact]
+    public void EndpointPath_NotFound_ReturnsStructured404Error()
+    {
+        var service = CreateService(out var clock);
+        
+        var result = service.DeleteHistoryItem(new Guid())
+        
     }
 }

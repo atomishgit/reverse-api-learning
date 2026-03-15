@@ -49,7 +49,7 @@ app.MapGet("/history", (int? limit, string? order, string? status, string? query
     }
     else
     {
-        return Results.BadRequest(new { error = "validation_failed", message = queryOutput.message });
+        return Results.BadRequest(queryOutput.error);
     }
 });
 
@@ -62,22 +62,18 @@ app.MapGet("/history/summary", (string? order, string? status, string? query, in
     {
         var summary= service.GetHistorySummary(queryOutput.options);
 
-        return Results.Ok(new
-        {
-            summary
-        });
+        return Results.Ok(summary);
     }
-    else
-    {
-        return Results.BadRequest(new { error = "validation_failed", message = queryOutput.message });
-    }
+
+    return Results.BadRequest(queryOutput.error);
 });
 
 app.MapGet("/history/{id:guid}", (Guid id, bool? includeDeleted, ReverseService service) =>
 {
     var entry = service.GetHistoryItem(id, includeDeleted ?? false);
 
-    return entry is null ? Results.NotFound() : Results.Ok(entry);
+    return entry is null ? Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History Item not found")) :
+        Results.Ok(entry);
 });
 
 app.MapPost("/reverse", async (ReverseRequest request, ReverseService service) =>
@@ -86,13 +82,9 @@ app.MapPost("/reverse", async (ReverseRequest request, ReverseService service) =
     if (request.Text is null)
     {
         // Return a structured 400 payload.
-        return Results.BadRequest(new
-        {
-            error = "validation_failed",
-            message = "Text is required."
-        });
+        return Results.BadRequest(new ApiError("validation_failed", ApiErrorCodes.TextRequired, "Text is required."));
     }
-    
+
     // ====== Real async shape ======
     //
     // This is intentionally small:
@@ -107,19 +99,21 @@ app.MapPost("/reverse", async (ReverseRequest request, ReverseService service) =
     
     // Reverse via service
     var result = service.ReverseAndStore(request.Text);
+
     
     return result.ok ? Results.Ok(new { original = request.Text, reversed = result.reversed}) : 
-        Results.BadRequest(new { error = "validation_failed", message = result.message });
+        Results.BadRequest(result.error);
 });
 
 app.MapDelete("/history", (int? olderThanMinutes, ReverseService service) =>
 {
     // Ensure olderThanMinutes is not null and is greater than zero, otherwise 400
     if (!olderThanMinutes.HasValue)
-        return Results.BadRequest(new { error = "validation_failed", message = "OlderThanMinutes is required." });
+        return Results.BadRequest(new ApiError("validation_failed", ApiErrorCodes.OlderThanRequired, "OlderThanMinutes is required."));
     
     if (olderThanMinutes <= 0)
-        return Results.BadRequest(new { error = "validation_failed", message = "OlderThanMinutes must be greater than 0." });
+        return Results.BadRequest(new ApiError("validation_failed", ApiErrorCodes.OlderThanMustBePositive, "OlderThanMinutes must be greater than 0."));
+
     
     // Convert minutes to TimeSpan
     var age = TimeSpan.FromMinutes(olderThanMinutes.Value);
@@ -139,7 +133,7 @@ app.MapDelete("/history/{id:guid}", (Guid id, ReverseService service) =>
     var alreadyDeleted = result.Item2;
     
     if (entry is null)
-        return Results.NotFound();
+        return Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History item not found."));
     
     return Results.Ok(new {isDeleted = entry.IsDeleted, deletedUTC = entry.DeletedUTC, alreadyDeleted});
 });
@@ -152,7 +146,7 @@ app.MapPost("/history/{id:guid}/restore", (Guid id, ReverseService service) =>
     var alreadyActive = result.Item2;
     
     if (entry is null)
-        return Results.NotFound();
+        return Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History item not found."));
     
     return Results.Ok(new {isDeleted = entry.IsDeleted, deletedUTC = entry.DeletedUTC, alreadyActive});
 });
