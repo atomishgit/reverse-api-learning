@@ -54,18 +54,18 @@ public class ReverseService(
         var filtered = BuildFilteredHistory(snapshot, options);
         
         // Calculate summary statistics
-        var summaryCount = snapshot.Count;
-        var activeCount = snapshot.Count(x => !x.IsDeleted);
-        var deletedCount = snapshot.Count(x => x.IsDeleted);
-        var everDeletedCount = snapshot.Count(x => x.LastDeletedUTC != null);
-        var neverDeletedCount = snapshot.Count(x => x.LastDeletedUTC == null);
+        var summaryCount = filtered.Count;
+        var activeCount = filtered.Count(x => !x.IsDeleted);
+        var deletedCount = filtered.Count(x => x.IsDeleted);
+        var everDeletedCount = filtered.Count(x => x.LastDeletedUTC != null);
+        var neverDeletedCount = filtered.Count(x => x.LastDeletedUTC == null);
         
         
-        int? minLength = summaryCount > 0 ? snapshot.Min(x => x.Length) : null;
-        int? maxLength = summaryCount > 0 ? snapshot.Max(x => x.Length) : null;
-        decimal? averageLength = summaryCount > 0 ? (decimal)Math.Round(snapshot.Average(x => x.Length), 2) : null;
-        DateTime? oldestCreated = summaryCount > 0 ? snapshot.Min(x => x.CreatedUTC) : null;
-        DateTime? newestCreated = summaryCount > 0 ? snapshot.Max(x => x.CreatedUTC) : null;
+        int? minLength = summaryCount > 0 ? filtered.Min(x => x.Length) : null;
+        int? maxLength = summaryCount > 0 ? filtered.Max(x => x.Length) : null;
+        decimal? averageLength = summaryCount > 0 ? (decimal)Math.Round(filtered.Average(x => x.Length), 2) : null;
+        DateTime? oldestCreated = summaryCount > 0 ? filtered.Min(x => x.CreatedUTC) : null;
+        DateTime? newestCreated = summaryCount > 0 ? filtered.Max(x => x.CreatedUTC) : null;
         
         return new HistorySummary(summaryCount, activeCount, deletedCount, everDeletedCount, 
             neverDeletedCount, minLength, maxLength, averageLength, oldestCreated, newestCreated);

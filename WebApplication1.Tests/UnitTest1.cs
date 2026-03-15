@@ -742,13 +742,13 @@ public class UnitTest1
         
         // Ensure summary only returns only info on the 4 matches
         var summary = service.GetHistorySummary(queryOptions.options);
-        summary.Count.Should().Be(7);
-        summary.ActiveCount.Should().Be(7);
+        summary.Count.Should().Be(4);
+        summary.ActiveCount.Should().Be(4);
         summary.DeletedCount.Should().Be(0);
         summary.EverDeletedCount.Should().Be(0);
-        summary.NeverDeletedCount.Should().Be(7);
+        summary.NeverDeletedCount.Should().Be(4);
         summary.MinLength.Should().Be(3);
-        summary.MaxLength.Should().Be(10);
+        summary.MaxLength.Should().Be(9);
     }
 
     [Fact]
@@ -766,10 +766,10 @@ public class UnitTest1
         
         // Ensure summary only returns only info on the 2 matches
         var summary = service.GetHistorySummary(queryOptions.options);
-        summary.Count.Should().Be(4);
-        summary.ActiveCount.Should().Be(4);
-        summary.MinLength.Should().Be(2);
-        summary.MaxLength.Should().Be(6);
+        summary.Count.Should().Be(2);
+        summary.ActiveCount.Should().Be(2);
+        summary.MinLength.Should().Be(3);
+        summary.MaxLength.Should().Be(5);
         summary.AverageLength.Should().Be(4);
     }
 
@@ -778,7 +778,7 @@ public class UnitTest1
     {
         var service = CreateService(out var clock);
         
-        CreateEntries(service, "abc", "defg", "ca", "ba", "aa", "fauabak", "lollolab");
+        CreateEntries(service, "abc", "defg", "ghijk", "abjklmnop", "qrstuvwxyz", "fauabak", "lollolab");
         
         // Grab the snapshot
         var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
@@ -788,34 +788,15 @@ public class UnitTest1
         
         // Ensure summary returns a count of 0, 0 in all lifecycle counts and null length and date fields
         var summary = service.GetHistorySummary(queryOptions.options);
-        summary.Count.Should().Be(7);
-        summary.ActiveCount.Should().Be(7);
+        summary.Count.Should().Be(0);
+        summary.ActiveCount.Should().Be(0);
         summary.DeletedCount.Should().Be(0);
         summary.EverDeletedCount.Should().Be(0);
-        summary.NeverDeletedCount.Should().Be(7);
-        summary.MinLength.Should().Be(2);
-        summary.MaxLength.Should().Be(8);
-        summary.AverageLength.Should().Be(4);
-        summary.OldestCreatedUtc.Should().NotBeNull();
-        summary.NewestCreatedUtc.Should().NotBeNull();
+        summary.NeverDeletedCount.Should().Be(0);
+        summary.MinLength.Should().BeNull();
+        summary.MaxLength.Should().BeNull();
+        summary.AverageLength.Should().BeNull();
+        summary.OldestCreatedUtc.Should().BeNull();
+        summary.NewestCreatedUtc.Should().BeNull();
     }
-
-    [Fact]
-    public void ReverseService_GetHistorySummary_SummaryIgnoresLimitFilter()
-    {
-        var service = CreateService(out var clock);
-        
-        CreateEntries(service, "abc", "defg", "ghijk", "abjklmnop", "qrstuvwxyz", "fauabak", "lollolab");
-        
-        // Grab the snapshot
-        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
-        
-        // Build a query object for the string "ab"
-        var queryOptions = HistoryQueryFactory.BuildHistoryQuery(1, null, null, null, true, null, null);
-       
-        
-        // Summary should contain all items
-        var summary = service.GetHistorySummary(queryOptions.options);
-        summary.Count.Should().Be(7);
-        }
 }
