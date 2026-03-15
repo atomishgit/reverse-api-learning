@@ -53,10 +53,10 @@ app.MapGet("/history", (int? limit, string? order, string? status, string? query
     }
 });
 
-app.MapGet("/history/summary", (int? limit, string? order, string? status, string? query, int? minLength, int? maxLength, bool? includeDeleted, ReverseService service) =>
+app.MapGet("/history/summary", (string? order, string? status, string? query, int? minLength, int? maxLength, bool? includeDeleted, ReverseService service) =>
 {
     // Setup query
-    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(limit, order, status, query, includeDeleted, minLength, maxLength);
+    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(null, order, status, query, includeDeleted, minLength, maxLength);
 
     if (queryOutput is { ok: true, options: not null })
     {

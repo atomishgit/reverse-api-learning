@@ -38,25 +38,20 @@ public class ReverseService(
             snapshot = new List<HistoryEntry>(_history);
         }
         
-        
-        return BuildFilteredHistory(options);
-        // Apply status filter
-        // var filtered = ApplyHistoryFilter(snapshot, options.Status, options.IncludeDeleted);
-        //
-        // // Apply string query
-        //  var queried = ApplyQueryFilter(filtered, options.Query);
-        //
-        //  // Apply length filter
-        //  queried = ApplyLengthFilter(queried, options.MinLength, options.MaxLength);
-        //  
-        //  // Return filtered and queried list after applying ordering and limit constraints
-        // return ApplyOrderingAndLimit(queried, options.Order, options.Limit);
+        snapshot = BuildFilteredHistory(snapshot, options);
+        return ApplyOrderingAndLimit(snapshot, options.Order, options.Limit);
     }
 
     public HistorySummary? GetHistorySummary(HistoryQueryOptions options)
     {
+        List<HistoryEntry> snapshot;
         
-        var snapshot = GetHistorySnapshot(options);
+        lock (_historyLock)
+        {
+            snapshot = new List<HistoryEntry>(_history);
+        }
+
+        var filtered = BuildFilteredHistory(snapshot, options);
         
         // Calculate summary statistics
         var summaryCount = snapshot.Count;
@@ -199,18 +194,15 @@ public class ReverseService(
         }
     }
 
-    private List<HistoryEntry> BuildFilteredHistory(HistoryQueryOptions options)
+    private List<HistoryEntry> BuildFilteredHistory(List<HistoryEntry> historySnapsot, HistoryQueryOptions options)
     {
         // Apply status filter
-        var filtered = ApplyHistoryFilter(_history, options.Status, options.IncludeDeleted);
+        var filtered = ApplyHistoryFilter(historySnapsot, options.Status, options.IncludeDeleted);
         
         // Apply string query
          var queried = ApplyQueryFilter(filtered, options.Query);
         
          // Apply length filter
-         queried = ApplyLengthFilter(queried, options.MinLength, options.MaxLength);
-         
-         // Return filtered and queried list after applying ordering and limit constraints
-         return ApplyOrderingAndLimit(queried, options.Order, options.Limit);
+         return ApplyLengthFilter(queried, options.MinLength, options.MaxLength);
     }
 }

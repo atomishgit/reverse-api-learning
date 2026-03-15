@@ -14,7 +14,7 @@ public class HistoryQueryFactory
         order ??= "desc";
     
         // var historyOrder is HistoryOrder.Asc if order = asc, HistoryOrder.Desc if order = desc, otherwise return false
-        if (!Enum.TryParse<HistoryOrder>(order, ignoreCase: true, out var historyOrder))
+        if (!TryParseOrder(order, out var historyOrder))
             return (false, null, "Order should be asc or desc");
         
         // status should be an allowed value, instantiates a parsedStatus value if validated
@@ -58,16 +58,13 @@ public class HistoryQueryFactory
                 !Enum.IsDefined(typeof(HistoryStatus), parseResult))
             return false;
         
-        if (!Enum.IsDefined(typeof(HistoryStatus), parseResult))
-            return false;
-        
         parsedStatus = parseResult;
         return true;
     }
 
-    private static bool TryParseOrder(string? order, out HistoryOrder? parsedOrder)
+    private static bool TryParseOrder(string? order, out HistoryOrder parsedOrder)
     {
-        parsedOrder = null;
+        parsedOrder = HistoryOrder.Desc;
 
         if (string.IsNullOrWhiteSpace(order))
             return true;
