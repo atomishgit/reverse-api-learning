@@ -53,6 +53,26 @@ app.MapGet("/history", (int? limit, string? order, string? status, string? query
     }
 });
 
+app.MapGet("/history/summary", (int? limit, string? order, string? status, string? query, int? minLength, int? maxLength, bool? includeDeleted, ReverseService service) =>
+{
+    // Setup query
+    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(limit, order, status, query, includeDeleted, minLength, maxLength);
+
+    if (queryOutput is { ok: true, options: not null })
+    {
+        var summary= service.GetHistorySummary(queryOutput.options);
+
+        return Results.Ok(new
+        {
+            summary
+        });
+    }
+    else
+    {
+        return Results.BadRequest(new { error = "validation_failed", message = queryOutput.message });
+    }
+});
+
 app.MapGet("/history/{id:guid}", (Guid id, bool? includeDeleted, ReverseService service) =>
 {
     var entry = service.GetHistoryItem(id, includeDeleted ?? false);

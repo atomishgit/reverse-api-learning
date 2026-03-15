@@ -38,17 +38,42 @@ public class ReverseService(
             snapshot = new List<HistoryEntry>(_history);
         }
         
+        
+        return BuildFilteredHistory(options);
         // Apply status filter
-        var filtered = ApplyHistoryFilter(snapshot, options.Status, options.IncludeDeleted);
+        // var filtered = ApplyHistoryFilter(snapshot, options.Status, options.IncludeDeleted);
+        //
+        // // Apply string query
+        //  var queried = ApplyQueryFilter(filtered, options.Query);
+        //
+        //  // Apply length filter
+        //  queried = ApplyLengthFilter(queried, options.MinLength, options.MaxLength);
+        //  
+        //  // Return filtered and queried list after applying ordering and limit constraints
+        // return ApplyOrderingAndLimit(queried, options.Order, options.Limit);
+    }
+
+    public HistorySummary? GetHistorySummary(HistoryQueryOptions options)
+    {
         
-        // Apply string query
-         var queried = ApplyQueryFilter(filtered, options.Query);
+        var snapshot = GetHistorySnapshot(options);
         
-         // Apply length filter
-         queried = ApplyLengthFilter(queried, options.MinLength, options.MaxLength);
-         
-         // Return filtered and queried list after applying ordering and limit constraints
-        return ApplyOrderingAndLimit(queried, options.Order, options.Limit);
+        // Calculate summary statistics
+        var summaryCount = snapshot.Count;
+        var activeCount = snapshot.Count(x => !x.IsDeleted);
+        var deletedCount = snapshot.Count(x => x.IsDeleted);
+        var everDeletedCount = snapshot.Count(x => x.LastDeletedUTC != null);
+        var neverDeletedCount = snapshot.Count(x => x.LastDeletedUTC == null);
+        
+        
+        int? minLength = summaryCount > 0 ? snapshot.Min(x => x.Length) : null;
+        int? maxLength = summaryCount > 0 ? snapshot.Max(x => x.Length) : null;
+        decimal? averageLength = summaryCount > 0 ? (decimal)Math.Round(snapshot.Average(x => x.Length), 2) : null;
+        DateTime? oldestCreated = summaryCount > 0 ? snapshot.Min(x => x.CreatedUTC) : null;
+        DateTime? newestCreated = summaryCount > 0 ? snapshot.Max(x => x.CreatedUTC) : null;
+        
+        return new HistorySummary(summaryCount, activeCount, deletedCount, everDeletedCount, 
+            neverDeletedCount, minLength, maxLength, averageLength, oldestCreated, newestCreated);
     }
 
     public HistoryEntry? GetHistoryItem(Guid id, bool includeDeleted = false)
@@ -172,5 +197,20 @@ public class ReverseService(
             // return all items
             return snapshot;
         }
+    }
+
+    private List<HistoryEntry> BuildFilteredHistory(HistoryQueryOptions options)
+    {
+        // Apply status filter
+        var filtered = ApplyHistoryFilter(_history, options.Status, options.IncludeDeleted);
+        
+        // Apply string query
+         var queried = ApplyQueryFilter(filtered, options.Query);
+        
+         // Apply length filter
+         queried = ApplyLengthFilter(queried, options.MinLength, options.MaxLength);
+         
+         // Return filtered and queried list after applying ordering and limit constraints
+         return ApplyOrderingAndLimit(queried, options.Order, options.Limit);
     }
 }

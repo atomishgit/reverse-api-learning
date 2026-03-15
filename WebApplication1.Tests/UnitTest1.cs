@@ -697,4 +697,106 @@ public class UnitTest1
         snapshot.Count.Should().Be(1);
         snapshot.Should().Contain(x => x.Original == "abcde");
     }
+
+    [Fact]
+    public void ReverseService_GetHistorySummary_MixedFilterReturnsCorrectSummary()
+    {
+        var service = CreateService(out var clock);
+        
+        CreateEntries(service, "abc", "defg", "ghijk", "jklmnop", "qrstuvwxyz");
+        
+        // Grab the snapshot
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+        
+        // Delete the entry "ghijk"
+        var deleted = service.DeleteHistoryItem(snapshot.First(x => x.Original == "ghijk").Id);
+        
+        // Delete item "abc"
+        var deleted2 = service.DeleteHistoryItem(snapshot.First(x => x.Original == "abc").Id);
+        
+        // Restore the abc item 
+        var restored = service.RestoreHistoryItem(deleted2.Item1!.Id);
+
+        var queryOptions = HistoryQueryFactory.BuildHistoryQuery(null, null, null, null, true, null, null);
+
+        var summary = service.GetHistorySummary(queryOptions.options);
+        summary.Count.Should().Be(5);
+        summary.ActiveCount.Should().Be(4);
+        summary.DeletedCount.Should().Be(1);
+        summary.EverDeletedCount.Should().Be(2);
+        summary.NeverDeletedCount.Should().Be(3);
+    }
+
+    [Fact]
+    public void ReverseService_GetHistorySummary_SummaryRespectsQueryFilters()
+    {
+        var service = CreateService(out var clock);
+        
+        CreateEntries(service, "abc", "defg", "ghijk", "abjklmnop", "qrstuvwxyz", "fauabak", "lollolab");
+        
+        // Grab the snapshot
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+        
+        // Build a query object for the string "ab"
+        var queryOptions = HistoryQueryFactory.BuildHistoryQuery(null, null, null, "ab", true, null, null);
+        
+        // Ensure summary only returns only info on the 4 matches
+        var summary = service.GetHistorySummary(queryOptions.options);
+        summary.Count.Should().Be(4);
+        summary.ActiveCount.Should().Be(4);
+        summary.DeletedCount.Should().Be(0);
+        summary.EverDeletedCount.Should().Be(0);
+        summary.NeverDeletedCount.Should().Be(4);
+        summary.MinLength.Should().Be(3);
+        summary.MaxLength.Should().Be(9);
+    }
+
+    [Fact]
+    public void ReverseService_GetHistorySummary_SummaryRespectsLengthFilters()
+    {
+        var service = CreateService(out var clock);
+        
+        CreateEntries(service, "ab", "def", "ghijk", "abjklm");
+        
+        // Grab the snapshot
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+        
+        // Build a query object for minlength 3 and max 5
+        var queryOptions = HistoryQueryFactory.BuildHistoryQuery(null, null, null, null, true, 3, 5);
+        
+        // Ensure summary only returns only info on the 2 matches
+        var summary = service.GetHistorySummary(queryOptions.options);
+        summary.Count.Should().Be(2);
+        summary.ActiveCount.Should().Be(2);
+        summary.MinLength.Should().Be(3);
+        summary.MaxLength.Should().Be(5);
+        summary.AverageLength.Should().Be(4);
+    }
+
+    [Fact]
+    public void ReverseService_GetHistorySummary_EmptyFilteredSetReturnsCorrectSummary()
+    {
+        var service = CreateService(out var clock);
+        
+        CreateEntries(service, "abc", "defg", "ghijk", "abjklmnop", "qrstuvwxyz", "fauabak", "lollolab");
+        
+        // Grab the snapshot
+        var snapshot = GetSnapshot(service, order: HistoryOrder.Desc, status: HistoryStatus.Active, includeDeleted: false);
+        
+        // Build a query object for the string "zzz"
+        var queryOptions = HistoryQueryFactory.BuildHistoryQuery(null, null, null, "zzz", true, null, null);
+        
+        // Ensure summary returns a count of 0, 0 in all lifecycle counts and null length and date fields
+        var summary = service.GetHistorySummary(queryOptions.options);
+        summary.Count.Should().Be(0);
+        summary.ActiveCount.Should().Be(0);
+        summary.DeletedCount.Should().Be(0);
+        summary.EverDeletedCount.Should().Be(0);
+        summary.NeverDeletedCount.Should().Be(0);
+        summary.MinLength.Should().BeNull();
+        summary.MaxLength.Should().BeNull();
+        summary.AverageLength.Should().BeNull();
+        summary.OldestCreatedUtc.Should().BeNull();
+        summary.NewestCreatedUtc.Should().BeNull();
+    }
 }
