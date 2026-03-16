@@ -1,0 +1,9 @@
+﻿Service Owns: The in-memory list of history objects and any functionality  related to manipulating/managing that
+
+Factory Owns: Generating the query object to be used in the service, validates parameters incoming from the endpoint
+
+Endpoint Owns: Passing HTTP parameters to service and providing a formatted response based on the output
+
+What design decisions improved the API the most: Keeping concerns separated and ensuring only the service touched the in-memory history, while keeping most validation abstracted
+
+What I'd Change: Go in and remove all anonymous contracts in lieu of structured records/classes

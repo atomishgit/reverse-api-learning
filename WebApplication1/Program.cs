@@ -49,10 +49,10 @@ app.MapGet("/history", (int? limit, string? order, string? status, string? query
     }
 });
 
-app.MapGet("/history/summary", (string? order, string? status, string? query, int? minLength, int? maxLength, int? offset, bool? includeDeleted, ReverseService service) =>
+app.MapGet("/history/summary", (string? order, string? status, string? query, int? minLength, int? maxLength, bool? includeDeleted, ReverseService service) =>
 {
     // Setup query
-    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(null, order, status, query, includeDeleted, minLength, maxLength, offset);
+    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(null, order, status, query, includeDeleted, minLength, maxLength, null);
 
     if (queryOutput is { ok: true, options: not null })
     {
@@ -68,7 +68,7 @@ app.MapGet("/history/{id:guid}", (Guid id, bool? includeDeleted, ReverseService 
 {
     var entry = service.GetHistoryItem(id, includeDeleted ?? false);
 
-    return entry is null ? Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History Item not found")) :
+    return entry is null ? Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History Item not found.")) :
         Results.Ok(entry);
 });
 
