@@ -10,9 +10,10 @@ public static class ApiErrorCodes
     public const string LimitMustBePositive = "limit_must_be_positive";
     public const string MinLengthNegative = "min_length_negative";
     public const string MaxLengthNegative = "max_length_negative";
-    public const string MinLLengthGreaterThanMaxLength = "min_length_greater_than_max_length";
+    public const string MinLengthGreaterThanMaxLength = "min_length_greater_than_max_length";
     public const string OlderThanRequired = "older_than_required";
     public const string OlderThanMustBePositive = "older_than_must_be_positive";
+    public const string OffsetNegative = "offset_negative";
     
     // Not Found
     public const string HistoryItemNotFound = "history_item_not_found";

@@ -29,7 +29,7 @@ public class ReverseService(
         return (true, reversed, null);
     }
     
-    public List<HistoryEntry> GetHistorySnapshot(HistoryQueryOptions options)
+    public HistoryResponse GetHistorySnapshot(HistoryQueryOptions options)
     {
         List<HistoryEntry> snapshot;
         
@@ -38,8 +38,12 @@ public class ReverseService(
             snapshot = new List<HistoryEntry>(_history);
         }
         
-        snapshot = BuildFilteredHistory(snapshot, options);
-        return ApplyOrderingAndLimit(snapshot, options.Order, options.Limit);
+        var filteredSnapshot = BuildFilteredHistory(snapshot, options);
+        int filteredCount = filteredSnapshot.Count;
+        var paginatedSnapshot = ApplyOrderingAndPaging(filteredSnapshot, options.Order, options.Limit, options.Offset);
+        
+        bool hasMore = ((options.Offset ?? 0) + paginatedSnapshot.Count) < filteredSnapshot.Count;
+        return new HistoryResponse(paginatedSnapshot, filteredCount, paginatedSnapshot.Count, options.Offset ?? 0, options.Limit, hasMore);
     }
 
     public HistorySummary GetHistorySummary(HistoryQueryOptions options)
@@ -152,13 +156,22 @@ public class ReverseService(
         };
     }
 
-    private static List<HistoryEntry> ApplyOrderingAndLimit(List<HistoryEntry> snapshot, HistoryOrder order, int? limit)
+    private static List<HistoryEntry> ApplyOrderingAndPaging(List<HistoryEntry> snapshot, HistoryOrder order, int? limit, int? offset)
     {
-        var ordered = order == HistoryOrder.Asc
-            ? snapshot.OrderBy(x => x.CreatedUTC).ThenBy(x => x.Id)
-            : snapshot.OrderByDescending(x => x.CreatedUTC).ThenByDescending(x => x.Id);
+        List<HistoryEntry> ordered = order == HistoryOrder.Asc
+            ? snapshot.OrderBy(x => x.CreatedUTC).ThenBy(x => x.Id).ToList()
+            : snapshot.OrderByDescending(x => x.CreatedUTC).ThenByDescending(x => x.Id).ToList();
 
-        // Return the snapshot, limited to the first N (limit) items
+        // Return the snapshot, limited to the first N items after skipping X offset if offset is not null
+        if (offset.HasValue)
+        {
+            if (offset.Value >= ordered.Count)
+                ordered =  new List<HistoryEntry>();
+            else
+                ordered = ordered.Skip(offset.Value).ToList();
+            
+        }
+
         return limit.HasValue ? ordered.Take(limit.Value).ToList() : ordered.ToList();
     }
 

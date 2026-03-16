@@ -32,20 +32,16 @@ app.MapGet("/ping", () => Results.Ok(new
     utc =DateTime.UtcNow
 }));
 
-app.MapGet("/history", (int? limit, string? order, string? status, string? query, int? minLength, int? maxLength, bool? includeDeleted, ReverseService service) =>
+app.MapGet("/history", (int? limit, string? order, string? status, string? query, int? minLength, int? maxLength, int? offset, bool? includeDeleted, ReverseService service) =>
 {
     // Setup query
-    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(limit, order, status, query, includeDeleted, minLength, maxLength);
+    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(limit, order, status, query, includeDeleted, minLength, maxLength, offset);
 
     if (queryOutput is { ok: true, options: not null })
     {
-        List<HistoryEntry> history = service.GetHistorySnapshot(queryOutput.options);
+        var historyResponse = service.GetHistorySnapshot(queryOutput.options);
 
-        return Results.Ok(new
-        {
-            count = history.Count,
-            items = history
-        });
+        return Results.Ok(historyResponse);
     }
     else
     {
@@ -53,10 +49,10 @@ app.MapGet("/history", (int? limit, string? order, string? status, string? query
     }
 });
 
-app.MapGet("/history/summary", (string? order, string? status, string? query, int? minLength, int? maxLength, bool? includeDeleted, ReverseService service) =>
+app.MapGet("/history/summary", (string? order, string? status, string? query, int? minLength, int? maxLength, int? offset, bool? includeDeleted, ReverseService service) =>
 {
     // Setup query
-    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(null, order, status, query, includeDeleted, minLength, maxLength);
+    var queryOutput = HistoryQueryFactory.BuildHistoryQuery(null, order, status, query, includeDeleted, minLength, maxLength, offset);
 
     if (queryOutput is { ok: true, options: not null })
     {
@@ -133,7 +129,7 @@ app.MapDelete("/history/{id:guid}", (Guid id, ReverseService service) =>
     var alreadyDeleted = result.Item2;
     
     if (entry is null)
-        return Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History item not found."));
+        return Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History Item not found."));
     
     return Results.Ok(new {isDeleted = entry.IsDeleted, deletedUTC = entry.DeletedUTC, alreadyDeleted});
 });
@@ -146,7 +142,7 @@ app.MapPost("/history/{id:guid}/restore", (Guid id, ReverseService service) =>
     var alreadyActive = result.Item2;
     
     if (entry is null)
-        return Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History item not found."));
+        return Results.NotFound(new ApiError("not_found", ApiErrorCodes.HistoryItemNotFound, "History Item not found."));
     
     return Results.Ok(new {isDeleted = entry.IsDeleted, deletedUTC = entry.DeletedUTC, alreadyActive});
 });

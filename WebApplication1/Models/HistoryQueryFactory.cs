@@ -3,7 +3,7 @@
 public class HistoryQueryFactory
 {
     public static (bool ok, HistoryQueryOptions? options, ApiError? error) 
-        BuildHistoryQuery(int? limit, string? order, string? status, string? query, bool? includeDeleted, int? minLength, int? maxLength)
+        BuildHistoryQuery(int? limit, string? order, string? status, string? query, bool? includeDeleted, int? minLength, int? maxLength, int? offset)
     {
         //================
         //Validation Begin
@@ -36,7 +36,10 @@ public class HistoryQueryFactory
         
         // if both minLength and maxLength are provided, min length should be less than or equal to max length
         if (minLength != null && maxLength != null && minLength > maxLength)
-            return (false, null, new ApiError("validation_failed",  ApiErrorCodes.MinLLengthGreaterThanMaxLength, "MinLength should be less than or equal to MaxLength"));
+            return (false, null, new ApiError("validation_failed",  ApiErrorCodes.MinLengthGreaterThanMaxLength, "MinLength should be less than or equal to MaxLength"));
+        
+        if (offset != null && offset < 0)
+            return (false, null, new ApiError("validation_failed",  ApiErrorCodes.OffsetNegative, "Offset should be greater than or equal to 0."));
         
         // If includeDeleted is null, default to false
         var includeDeletedValue = includeDeleted ?? false;
@@ -45,7 +48,7 @@ public class HistoryQueryFactory
         //Validation End
         //================
         
-        return (true, new HistoryQueryOptions(limit, historyOrder, parsedStatus, query, includeDeletedValue, minLength, maxLength), null);
+        return (true, new HistoryQueryOptions(limit, historyOrder, parsedStatus, query, includeDeletedValue, minLength, maxLength, offset), null);
     }
 
     private static bool TryParseStatus(string? status, out HistoryStatus? parsedStatus)

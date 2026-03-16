@@ -7,4 +7,5 @@ public record HistoryQueryOptions(
     string? Query,
     bool IncludeDeleted,
     int? MinLength,
-    int? MaxLength);
+    int? MaxLength,
+    int? Offset);
