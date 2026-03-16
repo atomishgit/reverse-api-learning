@@ -148,3 +148,8 @@ app.MapPost("/history/{id:guid}/restore", (Guid id, ReverseService service) =>
 });
 
 app.Run();
+
+public partial class Program
+{
+    
+}

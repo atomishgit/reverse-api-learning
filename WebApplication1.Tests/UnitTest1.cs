@@ -1,9 +1,14 @@
-﻿using WebApplication1.Services;
+﻿using System.Net;
+using System.Net.Http.Json;
+using WebApplication1.Services;
 
 using FluentAssertions;
 using WebApplication1.Models;
 
 namespace WebApplication1.Tests;
+
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Hosting;
 
 public class UnitTest1
 {
@@ -925,5 +930,83 @@ public class UnitTest1
         snapshotResult.HasMore.Should().BeTrue();
         snapshotResult.Offset.Should().Be(2);
         snapshotResult.Limit.Should().Be(2);
+    }
+    
+    [Fact]
+    public async Task HTTP_ReverseService_GetHistory_NegativeOffsetReturnsStructured400()
+    {
+        var factory = new WebApplicationFactory<Program>();
+        
+        var client = factory.CreateClient();
+        
+        var response = client.GetAsync("/history?offset=-1").Result;
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var error = await response.Content.ReadFromJsonAsync<ApiError>();
+        
+        error.Should().NotBeNull();
+        error!.Error.Should().Be("validation_failed");
+        error.Code.Should().Be(ApiErrorCodes.OffsetNegative);
+    }
+
+
+    [Fact]
+    public async Task HTTP_ReverseService_GetHistory_PagedHistoryReturnsCorrectMetadata()
+    {
+        var factory = new WebApplicationFactory<Program>();
+        
+        var client = factory.CreateClient();
+        
+        // Post a few entries via /reverse
+        var response = client.PostAsJsonAsync("/reverse?", new ReverseRequest { Text = "abc" }).Result;
+        response = client.PostAsJsonAsync("/reverse?", new ReverseRequest { Text = "def" }).Result;
+        response = client.PostAsJsonAsync("/reverse?", new ReverseRequest { Text = "ghi" }).Result;
+        response = client.PostAsJsonAsync("/reverse?", new ReverseRequest { Text = "jkl" }).Result;
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        
+        response = client.GetAsync("/history?limit=2&offset=1").Result;
+        var historyResponse = await response.Content.ReadFromJsonAsync<HistoryResponse>();
+        
+        historyResponse.Should().NotBeNull();
+        historyResponse.Total.Should().Be(4);
+        historyResponse.Count.Should().Be(2);
+        historyResponse.HasMore.Should().BeTrue();
+        historyResponse.Offset.Should().Be(1);
+        historyResponse.Limit.Should().Be(2);
+        historyResponse.Items.Count.Should().Be(historyResponse.Count);
+    }
+
+    [Fact]
+    public async Task HTTP_ReverseService_PostReverse_NoTextReturnsStructured400()
+    {
+        var factory = new WebApplicationFactory<Program>();
+        
+        var client = factory.CreateClient();
+        
+        var response = client.PostAsJsonAsync("/reverse?", new ReverseRequest()).Result;
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        
+        var error = await response.Content.ReadFromJsonAsync<ApiError>();
+
+        error.Should().NotBeNull();
+        error!.Error.Should().Be("validation_failed");
+        error.Code.Should().Be(ApiErrorCodes.TextRequired);
+    }
+
+    [Fact]
+    public async Task HTTP_ReverseService_GetHistoryItem_MissingItemIdReturnsStructured404()
+    {
+        var factory = new WebApplicationFactory<Program>();
+        
+        var client = factory.CreateClient();
+        
+        var missingId = Guid.NewGuid();
+        var response = client.GetAsync($"/history/{missingId}").Result;
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        
+        var error = await response.Content.ReadFromJsonAsync<ApiError>();
+        error.Should().NotBeNull();
+        error!.Error.Should().Be("not_found");
+        error.Code.Should().Be(ApiErrorCodes.HistoryItemNotFound);
     }
 }
